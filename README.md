@@ -54,13 +54,13 @@ You are able to use default **Map** methods like *get*, *has*, *clear*, and othe
 ```javascript
 let cookieValue = cookieFile.get('testKey')
 ```
-## Saving NetScape Cookie file
+#### Saving NetScape Cookie file
 You can specify new name for new cookiefile. If you create CookieMap using filename it will be used by default.
 ```javascript
 cookieFile.save('new.cookiefile');
 cookieFile.save(); // If you had specify filename when create object
 ```
-## toString methods
+#### toString methods
 You are able to use *toString* methods for Cookie object
 ```javascript
 cookie.toString()
