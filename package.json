@@ -1,0 +1,52 @@
+{
+  "name": "cookiefile",
+  "version": "1.0.0",
+  "description": "Package for operating with Netscape HTTP Cookie File",
+  "main": "http-cookiefile.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/_mocha tests/read-write-update.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/horat1us/node-cookiefile.git"
+  },
+  "keywords": [
+    "libcurl",
+    "cookie",
+    "cookiefile",
+    "netscape",
+    "wget",
+    "cookie",
+    "file"
+  ],
+  "author": "Alexander <horat1us> Letnikow",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/horat1us/node-cookiefile/issues"
+  },
+  "homepage": "https://github.com/horat1us/node-cookiefile#readme",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.1.0"
+  },
+  "dependencies": {
+    "file-exists": "^2.0.0",
+    "isnumeric": "^0.3.1"
+  },
+  "jshintConfig": {
+    "nodejs": true,
+    "camelcase": true,
+    "esversion": 6,
+    "curly": true,
+    "maxparams": 3,
+    "strict": "global",
+    "undef": true,
+    "unused": true,
+    "varstmt": true,
+    "devel": true,
+    "node": true
+  }
+}
