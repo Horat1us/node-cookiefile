@@ -22,11 +22,19 @@ module.exports = {
             return this.cookieName;
         }
 
+        get isCrossDomain() {
+            return this.crossDomain.toString().toUpperCase();
+        }
+
+        get isHttps() {
+            return this.https.toString().toUpperCase();
+        }
+
         /** @return {String} */
         toString() {
             let _this = this,
                 string = '';
-            ['domain', 'crossDomain', 'path', 'https', 'expire', 'name', 'value']
+            ['domain', 'isCrossDomain', 'path', 'isHttps', 'expire', 'name', 'value']
                 .forEach(prop => string += _this[prop] + '\t');
             return string.trim() + '\n';
         }
@@ -47,12 +55,13 @@ module.exports = {
     CookieMap: class CookieMap extends Map {
         constructor(file = []) {
             if (Array.isArray(file)) {
-                file.forEach((cookie, name) => {
-                    if (!(cookie instanceof module.exports.Cookie) || cookie.name != name) {
-                        throw new module.exports.CookieError();
+                super();
+                file.forEach(cookie => {
+                    if (!(cookie instanceof module.exports.Cookie)) {
+                        throw new module.exports.CookieError(4);
                     }
+                    this.set(cookie);
                 });
-                super(file);
                 this.file = false;
             } else if (typeof(file) === 'string') {
                 super();
@@ -65,16 +74,19 @@ module.exports = {
 
         /**
          * @param {Cookie} cookie
+         * @return {CookieMap}
          */
         set(cookie) {
             if (!(cookie instanceof module.exports.Cookie)) {
-                throw new TypeError("Cookie must be type of cookie");
+                throw new TypeError(`Cookie must be type of cookie, ${typeof(cookie)} given`);
             }
             super.set(cookie.name, cookie);
+
+            return this;
         }
 
         /**
-         * @return {String}
+         * @return {CookieMap}
          */
         save(file = false) {
             if (file === false || typeof(file) !== 'string') {
@@ -85,6 +97,8 @@ module.exports = {
             }
 
             require('fs').writeFileSync(file, this.toString());
+
+            return this;
         }
 
         toString() {
@@ -100,7 +114,7 @@ module.exports = {
 
 
         /**
-         * @param {String} file
+         * @return {CookieMap}
          */
         readFile() {
             if (!require('file-exists')(this.file)) {
@@ -117,13 +131,15 @@ module.exports = {
                     name: cookieData[5],
                     value: cookieData[6],
                     domain: cookieData[0],
-                    crossDomain: cookieData[1],
+                    crossDomain: cookieData[1] === 'TRUE',
                     path: cookieData[2],
-                    https: cookieData[3],
+                    https: cookieData[3] === 'TRUE',
                     expire: parseFloat(cookieData[4]),
                 }));
 
             cookies.forEach(cookie => this.set(cookie));
+
+            return this;
         }
 
 
@@ -135,6 +151,8 @@ module.exports = {
         constructor(code = 0) {
             const message = (() => {
                 switch (code) {
+                    case 4:
+                        return "Cookie passed to constructor is incorrect";
                     case 3:
                         return "Cookie file writing error";
                     case 2:

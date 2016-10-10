@@ -87,8 +87,37 @@ describe('Netscape HTTP Cookie File', function () {
 
         });
 
+        it('should correctly write boolean values (https and crossdomain) in upper case', () => {
+            const booleanCookie = new Cookie({
+                name: "booleanCookie",
+                value: "booleanValue",
+                domain: "google.com",
+                crossDomain: false,
+                https: true,
+            }),
+                cookieFile = 'tests/boolean.cookie',
+                isHttps = true.toString().toUpperCase(),
+                isCrossDomain = false.toString().toUpperCase(),
+                cookieList = new CookieMap([booleanCookie]).save(cookieFile);
+
+            const checkCookieList = new CookieMap(cookieFile);
+
+            expect(checkCookieList.size).to.equal(1);
+            const readCookie = checkCookieList.get('booleanCookie');
+            expect(readCookie.isHttps).to.equal(isHttps);
+            expect(readCookie.https).to.equal(true);
+            expect(readCookie.isCrossDomain).to.equal(isCrossDomain);
+            expect(readCookie.crossDomain).to.equal(false);
+        });
+
         after(() => {
-            ['writeTest.cookie', 'first.cookie', 'second.cookie', 'expire.cookie']
+            [
+                'writeTest.cookie',
+                'first.cookie',
+                'second.cookie',
+                'expire.cookie',
+                'boolean.cookie'
+            ]
                 .map((file) => `tests/${file}`)
                 .forEach((file) =>
                     fileExists(file)
