@@ -12,7 +12,7 @@ module.exports = {
             this.crossDomain = crossDomain;
             this.path = path;
             this.https = https;
-            this.expire = ~~expire;
+            this.expire = parseFloat(expire);
             this.value = value;
             this.cookieName = name;
         }
@@ -120,7 +120,7 @@ module.exports = {
                     crossDomain: cookieData[1],
                     path: cookieData[2],
                     https: cookieData[3],
-                    expire: cookieData[4],
+                    expire: parseFloat(cookieData[4]),
                 }));
 
             cookies.forEach(cookie => this.set(cookie));

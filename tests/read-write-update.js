@@ -61,8 +61,34 @@ describe('Netscape HTTP Cookie File', function () {
             expect(filesContent).to.have.length(2, 'Promises expect to read two files');
             expect(filesContent[0]).to.equal(filesContent[1], 'First file is not equal second');
         });
+
+        it('sould correctly work with expire timestamps', () => {
+            const cookieFile = 'tests/expire.cookie';
+            const cookieExpire = Date.now() + 30 * 24 * 60 * 60;
+
+            let cookieWithExpire = new Cookie({
+                domain: ".google.com",
+                name: "expireKey",
+                value: "expireValue",
+                expire: cookieExpire,
+            });
+
+            let cookieStorage = new CookieMap();
+            cookieStorage.set(cookieWithExpire);
+
+            cookieStorage.save(cookieFile);
+
+
+            let cookieStorageTest = new CookieMap(cookieFile);
+            expect(cookieStorageTest.size).to.equal(1);
+
+            let {expire} = cookieStorageTest.get('expireKey');
+            expect(expire).to.equal(cookieExpire);
+
+        });
+
         after(() => {
-            ['writeTest.cookie', 'first.cookie', 'second.cookie']
+            ['writeTest.cookie', 'first.cookie', 'second.cookie', 'expire.cookie']
                 .map((file) => `tests/${file}`)
                 .forEach((file) =>
                     fileExists(file)
