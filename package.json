@@ -1,6 +1,6 @@
 {
   "name": "cookiefile",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Package for operating with Netscape HTTP Cookie File",
   "main": "http-cookiefile.js",
   "directories": {
