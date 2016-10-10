@@ -64,7 +64,7 @@ describe('Netscape HTTP Cookie File', function () {
 
         it('sould correctly work with expire timestamps', () => {
             const cookieFile = 'tests/expire.cookie';
-            const cookieExpire = Date.now() + 30 * 24 * 60 * 60;
+            const cookieExpire = 30 * 24 * 60 * 60;
 
             let cookieWithExpire = new Cookie({
                 domain: ".google.com",
@@ -89,12 +89,12 @@ describe('Netscape HTTP Cookie File', function () {
 
         it('should correctly write boolean values (https and crossdomain) in upper case', () => {
             const booleanCookie = new Cookie({
-                name: "booleanCookie",
-                value: "booleanValue",
-                domain: "google.com",
-                crossDomain: false,
-                https: true,
-            }),
+                    name: "booleanCookie",
+                    value: "booleanValue",
+                    domain: "google.com",
+                    crossDomain: false,
+                    https: true,
+                }),
                 cookieFile = 'tests/boolean.cookie',
                 isHttps = true.toString().toUpperCase(),
                 isCrossDomain = false.toString().toUpperCase(),
@@ -109,6 +109,118 @@ describe('Netscape HTTP Cookie File', function () {
             expect(readCookie.isCrossDomain).to.equal(isCrossDomain);
             expect(readCookie.crossDomain).to.equal(false);
         });
+        it('cloning cookies', () => {
+            const properties = {
+                name: "test",
+                value: 123,
+                https: false,
+                expire: 0,
+                httpOnly: false
+            };
+            let originalCookie = new Cookie(properties);
+
+            let clone = originalCookie.clone();
+            for (let property in properties) {
+                expect(clone[property]).to.equal(originalCookie[property]);
+            }
+
+            const changes = {
+                value: 345,
+                httpOnly: true,
+            };
+            let save = {};
+            for (let property in changes) {
+                save[property] = clone[property];
+                clone[property] = changes[property];
+                expect(clone[property]).to.not.equal(originalCookie[property]);
+            }
+            for (let property in save) {
+                clone[property] = save[property];
+                expect(clone[property]).to.equal(originalCookie[property]);
+            }
+
+        });
+        it('should correctly work with HttpOnly cookies', () => {
+            const CookieFile = new CookieMap('tests/httponly.sample.cookie'),
+                domain = "horatius.pro";
+
+            expect(CookieFile).to.have.property("size").and.equal(2);
+
+            let simpleCookie = CookieFile.get('simpleCookie');
+            expect(simpleCookie).to.have.property('name').and.equal('simpleCookie');
+            expect(simpleCookie).to.have.property('value').and.equal('simple');
+            expect(simpleCookie).to.have.property('domain').and.equal(domain);
+            expect(simpleCookie).to.have.property('httpOnly').and.equal(false, "Error on simple cookie detecting");
+
+            let httpOnlyCookie = CookieFile.get('httpOnlyCookie');
+            expect(httpOnlyCookie.name).to.equal('httpOnlyCookie');
+            expect(httpOnlyCookie).to.have.property('httpOnly').and.equal(true, "Error on httpOnly Cookie detecting");
+            expect(httpOnlyCookie).to.have.property('domain').and.equal(domain, "Error on detecting HttpOnly cookie domain");
+        });
+        it('sould corrently generate file with HttpOnly cookies', () => {
+            const CookieFile = new CookieMap('tests/httponly.sample.cookie'),
+                httpOnlyTestFile = 'tests/httponly.test.cookie';
+
+            CookieFile.save(httpOnlyTestFile);
+
+
+            const [sampleCookieFile, testCookieFile] = [httpOnlyTestFile, 'tests/httponly.sample.cookie']
+                .map((file) => fs.readFileSync(file, {encoding: "UTF-8"}));
+
+            expect(sampleCookieFile).to.equal(testCookieFile, "New test file must be equal to sample")
+        });
+        it('should correctly create and write HTTP headers', () => {
+            const cookies = new CookieMap([
+                new Cookie({name: 'test', value: 'testValue', expire: 0, domain: "horatius.pro"}),
+                new Cookie({name: 'test2', value: 'defaultValue', httpOnly: true, domain: "google.com"}),
+            ]);
+
+            let cookieResponseHeader = cookies.toResponseHeader();
+
+            expect(cookieResponseHeader).to.have.lengthOf(cookies.size);
+            const cookiesParsed = new CookieMap();
+            cookieResponseHeader.forEach((header) => cookiesParsed.header(header));
+
+            expect(cookies).to.have.property("size").and.equal(2);
+
+            const properties = ['name', 'value', 'expire', 'httpOnly'];
+
+            for (let [name, cookie] of cookies) {
+                let parsedCookie = cookiesParsed.get(name);
+                expect(parsedCookie).to.be.an('object', `${name} cookie is not an object`);
+                properties
+                    .forEach(property => expect(cookie[property]).to.equal(
+                        parsedCookie[property]), `${properties} is not same`
+                    );
+            }
+        });
+        it('should correctly generate request cookie header', () => {
+            const data = [
+                ["test", "value"],
+                ["data", "sample"]
+            ];
+            const cookieMap = new CookieMap();
+            data.forEach(([name, value]) => cookieMap.set(new Cookie({
+                name, value, domain: "foo.bar"
+            })));
+
+            const requestCookieHeader = cookieMap.toRequestHeader();
+
+            let cookies = requestCookieHeader
+                .replace('Cookie: ', '').split('; ')
+                .map(cookie => cookie.trim())
+                .map(cookie => cookie.split('='));
+
+            expect(cookies).to.have.lengthOf(data.length);
+
+            for (let i = 0; i < data.length; i++) {
+                let [name, value] = data[i];
+                let [cookieName, cookieValue] = cookies[i];
+
+                expect(name).to.equal(cookieName);
+                expect(value).to.equal(cookieValue);
+            }
+        });
 
         after(() => {
             [
@@ -116,12 +228,12 @@ describe('Netscape HTTP Cookie File', function () {
                 'first.cookie',
                 'second.cookie',
                 'expire.cookie',
-                'boolean.cookie'
+                'boolean.cookie',
+                'httponly.test.cookie',
             ]
                 .map((file) => `tests/${file}`)
+                .filter(file => fileExists(file))
                 .forEach((file) =>
-                    fileExists(file)
-                    &&
                     fs.unlink(file, (error) => error && assert.fail(error))
                 );
         });

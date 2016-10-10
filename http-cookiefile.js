@@ -4,7 +4,7 @@
 "use strict";
 module.exports = {
     Cookie: class Cookie {
-        constructor({domain, crossDomain = false, path = '/', https = false, expire = 0, name, value}) {
+        constructor({domain, httpOnly = false, crossDomain = false, path = '/', https = false, expire = 0, name, value}) {
             if (!(expire instanceof Date || require('isnumeric')(expire))) {
                 throw new module.exports.CookieError();
             }
@@ -15,6 +15,7 @@ module.exports = {
             this.expire = ~~expire ? ~~expire : 0;
             this.value = value;
             this.cookieName = name;
+            this.httpOnly = httpOnly
         }
 
         /** @return {String} */
@@ -30,13 +31,36 @@ module.exports = {
             return this.https.toString().toUpperCase();
         }
 
+        /**
+         * @return {Cookie}
+         */
+        clone() {
+            return new Cookie(this);
+        }
+
         /** @return {String} */
         toString() {
             let _this = this,
-                string = '';
+                string = this.httpOnly ? "#HttpOnly_" : "";
             ['domain', 'isCrossDomain', 'path', 'isHttps', 'expire', 'name', 'value']
                 .forEach(prop => string += _this[prop] + '\t');
             return string.trim() + '\n';
+        }
+
+        toHeader() {
+            return `${this.name}=${this.value}; `;
+        }
+
+        toResponseHeader() {
+
+            return `Set-Cookie: ${this.name}=${this.value}; ` +
+                [['Domain', 'domain'], ['Path', 'path'], ['Expires', 'expire']]
+                    .map(([name, prop]) => `${name}=${this[prop]}`)
+                    .join('; ') + ';' +
+                [['Secure', 'https'], ['HttpOnly', 'httpOnly']]
+                    .filter(([,property]) => this[property])
+                    .map(([name]) => ` ${name}`)
+                    .join('; ');
         }
 
         /**
@@ -73,6 +97,78 @@ module.exports = {
         }
 
         /**
+         * @param {String} header HTTP Header like Set-Cookie: ...
+         * @return {CookieMap}
+         */
+        header(header) {
+            if (!CookieMap.validateHeader(header)) {
+                return this;
+            }
+            let CookieInfo = {};
+
+            header
+                .replace('Set-Cookie: ', '')
+                .split(';')
+                .map(
+                    part => part
+                        .trim()
+                        .split('=')
+                        .map(subPart => subPart.trim())
+                )
+                .filter(part => {
+                    if (part.length === 2) {
+                        return true;
+                    }
+                    switch (part[0]) {
+                        case "Secure":
+                            CookieInfo.https = true;
+                            break;
+                        case "HttpOnly":
+                            CookieInfo.httpOnly = true;
+                            break;
+                    }
+                    return false;
+                })
+                .forEach(([name, value]) => {
+                    switch (name) {
+                        case "Domain":
+                            return CookieInfo.domain = value;
+                        case "Path":
+                            return CookieInfo.path = value;
+                        case "Expires":
+                            return CookieInfo.expire = value;
+                        case "Same-Site":
+                        case "Max-Age":
+                            // TODO: Integrate support for Max-Age and Same-Site directives
+                            return;
+                        default:
+                            CookieInfo.name = name;
+                            CookieInfo.value = value;
+                    }
+                });
+            ['name', 'value', 'domain']
+                .forEach(prop => {
+                    if (!CookieInfo.hasOwnProperty(prop)) {
+                        throw new module.exports.CookieError(5);
+                    }
+                });
+
+            this.set(new module.exports.Cookie(CookieInfo));
+
+            return this;
+        }
+
+        /**
+         * Takes sample HTTP Cookie and return true if set-cookie header given
+         * @param {String} header HTTP Header like Set-Cookie: ...
+         */
+        static validateHeader(header) {
+            return header
+                    .trim()
+                    .substr(0, 11) === "Set-Cookie:";
+        }
+
+        /**
          * @param {Cookie} cookie
          * @return {CookieMap}
          */
@@ -101,6 +197,17 @@ module.exports = {
             return this;
         }
 
+        /**
+         * @returns {CookieMap}
+         */
+        clone() {
+            let cookieMap = new CookieMap();
+            for ([, cookie] of this) {
+                cookieMap.set(cookie.clone());
+            }
+            return cookieMap;
+        }
+
         toString() {
             let cookieContent = module.exports.CookieFile.Header;
 
@@ -110,6 +217,35 @@ module.exports = {
             }
 
             return cookieContent.trim();
+        }
+
+        /**
+         * @return {String} HTTP User header
+         */
+        toRequestHeader({http = true, secure = true} = {}) {
+            let string = 'Cookie: ';
+            /**
+             * @var {String} name
+             * @var {Cookie} cookie
+             */
+            for (let [, cookie] of this) {
+                string += cookie.toHeader();
+            }
+
+            return string.replace(/;\s*$/, '');
+        }
+
+        /**
+         * @return {String} HTTP Server header
+         */
+        toResponseHeader() {
+            let headers = [];
+
+            for (let [,cookie] of this) {
+                headers.push(cookie.toResponseHeader());
+            }
+
+            return headers;
         }
 
 
@@ -127,7 +263,7 @@ module.exports = {
                 .split('\n')
                 .map(line => line.split("\t").map((word) => word.trim()))
                 .filter(line => line.length === 7)
-                .map(cookieData => new module.exports.Cookie({
+                .map(cookieData => ({
                     name: cookieData[5],
                     value: cookieData[6],
                     domain: cookieData[0],
@@ -135,9 +271,17 @@ module.exports = {
                     path: cookieData[2],
                     https: cookieData[3] === 'TRUE',
                     expire: ~~cookieData[4] ? ~~cookieData[4] : 0,
-                }));
-
-            cookies.forEach(cookie => this.set(cookie));
+                }))
+                .map(cookie => {
+                    if (cookie.domain.substr(0, 10) === "#HttpOnly_") {
+                        cookie.httpOnly = true;
+                        cookie.domain = cookie.domain.substr(10);
+                    }
+                    return cookie;
+                })
+                .forEach(cookie => this.set(
+                    new module.exports.Cookie(cookie)
+                ));
 
             return this;
         }
@@ -151,6 +295,8 @@ module.exports = {
         constructor(code = 0) {
             const message = (() => {
                 switch (code) {
+                    case 5:
+                        return "Wrong header passed for creating cookie";
                     case 4:
                         return "Cookie passed to constructor is incorrect";
                     case 3:
