@@ -229,7 +229,38 @@ describe('Netscape HTTP Cookie File', function () {
             let googleCookie = cookieMap.get('NID');
             expect(googleCookie).to.have.property('value').and.equal('88=Sample');
         });
+        it('should correctly create CookieMap from cookie request headers', () => {
+            const cookieMap = new CookieMap(),
+                cookies = [
+                    ['test', 'value'],
+                    ['what', 'todo'],
+                    ['might', 'be']
+                ],
+                params = {
+                    expire: 0,
+                    crossDomain: false,
+                    domain: "horatius.pro"
+                };
+            const cookieString = `Cookie: ${cookies.map(nameValue => nameValue.join('=')).join(';')};`;
+            cookieMap.generate(cookieString, params);
 
+            expect(cookieMap.size).to.be.at.least(cookies.length);
+
+            cookies
+                .forEach(([name, value]) => {
+                    const cookie = cookieMap.get(name),
+                        properties = Object.assign({name, value}, params);
+                    for(let prop in properties)
+                    {
+                        if(!properties.hasOwnProperty(prop))
+                        {
+                            continue;
+                        }
+                        expect(cookie).to.have.property(prop).and.equal(properties[prop]);
+                    }
+                });
+
+        });
         after(() => {
             [
                 'writeTest.cookie',

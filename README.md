@@ -59,6 +59,17 @@ To read from `Set-Cookie` response header please use `header` method of `CookieM
  const cookiesParsed = new CookieMap();
  cookiesParsed.header('Set-Cookie: id=a3fWa');
  ```
+ Also, you can load cookie from request header `Cookie: a=b;d=c`:
+ ```javascript
+ const requestParsed = new CookieMap();
+ 
+ let options = {
+     domain: ".google.com",
+     secure: true,
+ }; // Options, which will be send to Cookie constructor
+ 
+ CookieMap.generate('Cookie: a=b;d=c', {htt})
+ ```
 #### Adding new cookies 
 Overloaded Map.set method. It will get name for the row from cookie object
 ```javascript

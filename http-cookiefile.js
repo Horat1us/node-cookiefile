@@ -98,6 +98,21 @@ module.exports = {
         }
 
         /**
+         * @param {String} nameValue a=b=c
+         * @returns {Array} [ 'a', 'b=c' ]
+         */
+        static split(nameValue) {
+            let parts = nameValue
+                .trim()
+                .split('=');
+            if (parts.length == 1) {
+                return parts;
+            }
+            parts = [parts[0], (nameValue.replace(`${parts[0]}=`, ''))];
+            return parts;
+        }
+
+        /**
          * @param {String} header HTTP Header like Set-Cookie: ...
          * @return {CookieMap}
          */
@@ -109,19 +124,7 @@ module.exports = {
             header
                 .replace('Set-Cookie: ', '')
                 .split(';')
-                .map(
-                    part => {
-                        let parts = part
-                            .trim()
-                            .split('=');
-                        if(parts.length == 1)
-                        {
-                            return parts;
-                        }
-                        parts = [parts[0], (part.replace(`${parts[0]}=`, ''))];
-                        return parts;
-                    }
-                )
+                .map(CookieMap.split)
                 .map(parts => parts.map(part => part.trim()))
                 .filter(part => {
                     if (part.length === 2) {
@@ -162,6 +165,27 @@ module.exports = {
                 });
 
             this.set(new module.exports.Cookie(CookieInfo));
+
+            return this;
+        }
+
+        /**
+         * @param {String} requestHeader: Cookie: a=b; d=c
+         * @param {Object} params
+         * @return {CookieMap}
+         */
+        generate(requestHeader, params = {}) {
+            requestHeader
+                .replace('Cookie: ', '')
+                .trim()
+                .split(';')
+                .map(cookie => cookie.trim())
+                .filter(cookie => cookie.length > 0)
+                .map(CookieMap.split)
+                .filter(cookie => cookie.length === 2)
+                .map(([name, value]) => Object.assign({name, value}, params))
+                .map(params => new module.exports.Cookie(params))
+                .forEach(cookie => this.set(cookie));
 
             return this;
         }
