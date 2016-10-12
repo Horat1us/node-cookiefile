@@ -54,9 +54,10 @@ module.exports = {
         toResponseHeader() {
 
             return `Set-Cookie: ${this.name}=${this.value}; ` +
-                [['Domain', 'domain'], ['Path', 'path'], ['Expires', 'expire']]
+                [['Domain', 'domain'], ['Path', 'path']]
                     .map(([name, prop]) => `${name}=${this[prop]}`)
-                    .join('; ') + ';' +
+                    .join('; ') + '; ' +
+                `expires=${new Date(this.expire).toUTCString()}; ` +
                 [['Secure', 'https'], ['HttpOnly', 'httpOnly']]
                     .filter(([,property]) => this[property])
                     .map(([name]) => ` ${name}`)
@@ -105,16 +106,23 @@ module.exports = {
                 return this;
             }
             let CookieInfo = {};
-
             header
                 .replace('Set-Cookie: ', '')
                 .split(';')
                 .map(
-                    part => part
-                        .trim()
-                        .split('=')
-                        .map(subPart => subPart.trim())
+                    part => {
+                        let parts = part
+                            .trim()
+                            .split('=');
+                        if(parts.length == 1)
+                        {
+                            return parts;
+                        }
+                        parts = [parts[0], (part.replace(`${parts[0]}=`, ''))];
+                        return parts;
+                    }
                 )
+                .map(parts => parts.map(part => part.trim()))
                 .filter(part => {
                     if (part.length === 2) {
                         return true;
@@ -130,15 +138,15 @@ module.exports = {
                     return false;
                 })
                 .forEach(([name, value]) => {
-                    switch (name) {
-                        case "Domain":
+                    switch (name.toLowerCase()) {
+                        case "domain":
                             return CookieInfo.domain = value;
-                        case "Path":
+                        case "path":
                             return CookieInfo.path = value;
-                        case "Expires":
-                            return CookieInfo.expire = value;
-                        case "Same-Site":
-                        case "Max-Age":
+                        case "expires":
+                            return CookieInfo.expire = new Date(value);
+                        case "same-Site":
+                        case "max-Age":
                             // TODO: Integrate support for Max-Age and Same-Site directives
                             return;
                         default:

@@ -20,7 +20,11 @@
     "netscape",
     "wget",
     "cookie",
-    "file"
+    "file",
+    "header",
+    "http",
+    "request",
+    "response"
   ],
   "author": "Alexander <horat1us> Letnikow",
   "license": "MIT",

@@ -221,6 +221,14 @@ describe('Netscape HTTP Cookie File', function () {
                 expect(value).to.equal(cookieValue);
             }
         });
+        it('should correctly read google.com set-cookie directive', () => {
+            const googleSetCookie = `Set-Cookie: NID=88=Sample; expires=Thu, 13-Apr-2017 12:53:01 GMT; path=/; domain=.google.com.ua; HttpOnly`,
+                cookieMap = new CookieMap();
+
+            cookieMap.header(googleSetCookie);
+            let googleCookie = cookieMap.get('NID');
+            expect(googleCookie).to.have.property('value').and.equal('88=Sample');
+        });
 
         after(() => {
             [
