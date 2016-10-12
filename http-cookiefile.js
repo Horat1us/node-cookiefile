@@ -114,9 +114,10 @@ module.exports = {
 
         /**
          * @param {String} header HTTP Header like Set-Cookie: ...
+         * @param {Object} props
          * @return {CookieMap}
          */
-        header(header) {
+        header(header, props = {}) {
             if (!CookieMap.validateHeader(header)) {
                 return this;
             }
@@ -157,6 +158,9 @@ module.exports = {
                             CookieInfo.value = value;
                     }
                 });
+
+            Object.assign(CookieInfo, props);
+
             ['name', 'value', 'domain']
                 .forEach(prop => {
                     if (!CookieInfo.hasOwnProperty(prop)) {
