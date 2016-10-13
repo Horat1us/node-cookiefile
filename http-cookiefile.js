@@ -159,7 +159,7 @@ module.exports = {
                     }
                 });
 
-            Object.assign(props, CookieInfo);
+            CookieInfo = Object.assign(props, CookieInfo);
 
             ['name', 'value', 'domain']
                 .forEach(prop => {
